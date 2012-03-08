@@ -3,8 +3,8 @@
 **************/
 
 /*
- plain mode: $gcc -o lao-plain.cgi lao-native.c ; chmod +x lao-plain.cgi
- graph mode: $gcc -lm -DGRAPHMODE -o lao-table lao-native.c ; chmod +x lao-table
+ plain mode: $gcc -o lao-plain.cgi lao-native.c
+ graph mode: $gcc -lm -DGRAPHMODE -o lao-table lao-native.c
 */
 
 #include <stdio.h>
@@ -14,14 +14,19 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <sys/syslimits.h>
+
+#ifndef linux
+ /* for PATH_MAX */
+ #include <sys/syslimits.h>
+#endif
+
 #include <grp.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <time.h>
 
 #ifdef GRAPHMODE
-#include <math.h>
+ #include <math.h>
 #endif
 
 #define HOME "/home"
@@ -32,14 +37,17 @@
 void error(const char *szError);
 int getusercount(void);
 
+time_t getuptime(time_t tmCurrent);
+
 int main(void)
 {
 	/* declare */
 	char szHostName[HOSTLEN+1];
 	int nUserCount = 0;
 	double nLoadAvg[]={-1,-1,-1,-1};
-	int mib[2],nUptime;
-	struct timeval tvBoottime,tvCurrent;
+	int nUptime;
+	struct timeval tvCurrent;
+	time_t tmBoottime;
 	struct timezone tz;
 	size_t len=0;
 	struct tm *tmCurrent;
@@ -66,26 +74,14 @@ int main(void)
 		error("getloadavg");
 	}
 
-	/* get boot epoch to get uptime(BSD) */
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_BOOTTIME;
-	len = sizeof(tvBoottime);
-	if(sysctl(mib, 2, &tvBoottime, &len, NULL, 0)){
-		error("sysctl");
-	}
-	
-	/*
-	get uptime at Linux ... read "/proc/uptime" first val
-	
-	$cat /proc/uptime
-	[uptime] [idletime]
-	*/
-	
+	/* get uptime */
 	if(gettimeofday(&tvCurrent,&tz)){
 		error("getttimeofday");
 	}
+	tmBoottime = getuptime(tvCurrent.tv_sec);
 
-	nUptime = (tvCurrent.tv_sec - tvBoottime.tv_sec)/86400; /* 86400 = 60*60*24 */
+	/* 86400 = 60*60*24 secs->days */
+	nUptime = tmBoottime / 86400;
 
 	/* get current time */
 	
@@ -120,7 +116,7 @@ int main(void)
 	return 0;
 }
 
-/* put error */
+/* put error and exit*/
 void error(const char *szError)
 {
 	puts(szError);
@@ -167,4 +163,44 @@ int getusercount(void)
 	
 	return nUserCount;
 }
+
+#ifdef linux
+time_t getuptime(time_t tmCurrent)
+{
+	FILE *fp = NULL;
+	double uptime,idle;
+	
+	if((fp = fopen("/proc/uptime","r")) == NULL){
+		fclose(fp);
+		error("fopen");
+	}
+	
+	if(fscanf(fp,"%lf %lf",&uptime,&idle) == EOF){
+		fclose(fp);
+		error("fscanf");
+	}
+	fclose(fp);
+	
+	return (time_t)uptime;
+}
+
+#else
+time_t getuptime(time_t tmCurrent)
+{
+	int mib[2];
+	struct timeval tvBoottime;
+	size_t len=0;
+	
+	/* get boot epoch to get uptime(BSD) */
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_BOOTTIME;
+	len = sizeof(tvBoottime);
+	if(sysctl(mib, 2, &tvBoottime, &len, NULL, 0)){
+		error("sysctl");
+	}
+	
+	return tmCurrent - tvBoottime.tv_sec;
+}
+#endif
+
 
