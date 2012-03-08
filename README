@@ -1,0 +1,26 @@
+Native code for load average observation at sakura.ne.jp servers
+
+cf.(written in only Japanese language)
+ http://faq.sakuratan.com/lal/onegai.html
+
+This code will generate same answer as lao-plain.cgi(and lao-graph.cgi) .
+Original CGIs are written in perl.
+
+only tested at www327.sakura.ne.jp and www310.sakura.ne.jp
+
+*build
+This code can built on FreeBSD and Linux.
+However , sakura.ne.jp servers are FreeBSD;)
+
+-plain mode(lao-plain.cgi)
+$gcc -o lao-plain.cgi lao-native.c
+
+-graph mode(lao-table.cgi)
+$gcc -lm -DGRAPHMODE -o lao-table.cgi lao-native.c
+
+*license
+MIT License
+
+*author
+walkure at kmc.gr.jp
+
