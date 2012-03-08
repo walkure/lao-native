@@ -29,8 +29,12 @@
  #include <math.h>
 #endif
 
+/* home directory */
 #define HOME "/home"
+
+/* count user directory's group */
 #define GROUP "users"
+
 #define HOSTLEN 30
 #define TIMELEN 10
 
