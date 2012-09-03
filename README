@@ -22,5 +22,5 @@ $gcc -lm -DGRAPHMODE -o lao-table.cgi lao-native.c
 MIT License
 
 *author
-walkure at kmc.gr.jp
+walkure at 3pf.jp
 
